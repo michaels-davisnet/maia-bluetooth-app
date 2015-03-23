@@ -17,7 +17,7 @@
 /* global ble, cordova  */
 /* jshint browser: true , devel: true*/
 
-'use strict'; // THIS SHIT CAUSED WRITE ISSUE?!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+'use strict'; // THIS CAUSED WRITE ISSUE?!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 // Based on the serialLab example.
 
@@ -57,6 +57,7 @@ var app = {
         refreshButton.addEventListener('touchstart', this.refreshDeviceList, false);
         sendButton.addEventListener('click', this.sendData, false);
         disconnectButton.addEventListener('touchstart', this.disconnect, false);
+		fwupButton.addEventListener('touchstart', this.getFirmware, false);
         deviceList.addEventListener('touchstart', this.connect, false); // assume not scrolling
     },
     onDeviceReady: function() {
@@ -118,6 +119,27 @@ var app = {
         var deviceId = event.target.dataset.deviceId;
         ble.disconnect(deviceId, app.showMainPage, app.onError);
     },
+	getFirmware: function() {
+		var fileTransfer = new FileTransfer();
+		var uri = encodeURI("http://maiadev.weatherlink.com/firmware/fwup.bin");
+		//var uri = encodeURI("http://www.phonegaptutorial.com/wp-content/uploads/examples/phonegap-logo.png");
+		var fileURL = "cdvfile://localhost/persistent/fwup.bin"
+		
+		fileTransfer.download(
+			uri,
+			fileURL,
+			function(entry) {
+				alert("download complete: " + entry.toURL());
+			},
+			function(error) {
+				alert("download error source " + error.source);
+				alert("download error target " + error.target);
+				alert("upload error code" + error.code);
+			},
+			true
+		);
+		
+	},
     showMainPage: function() {
         mainPage.hidden = false;
         detailPage.hidden = true;
