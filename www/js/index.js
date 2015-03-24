@@ -17,7 +17,8 @@
 /* global ble, cordova  */
 /* jshint browser: true , devel: true*/
 
-'use strict'; // THIS CAUSED WRITE ISSUE?!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+'use strict'; // need to be included for ble write
 
 // Based on the serialLab example.
 
@@ -25,7 +26,6 @@
 function bytesToString(buffer) {
     return String.fromCharCode.apply(null, new Uint8Array(buffer));
 }
-
 
 // ASCII only
 function stringToBytes(string) {
@@ -36,7 +36,6 @@ function stringToBytes(string) {
     return array.buffer;
 }
 
-//this is serial Lab's UART service
 var serial = {
     serviceUUID: "0000DA00-384C-0787-5024-F95B53F8CB75",
     rxCharacteristic: "0000DA01-384C-0787-5024-F95B53F8CB75"  // receive is from the phone's perspective
@@ -47,8 +46,9 @@ var cmd = {
 	txCharacteristic: "0000DA11-384C-0787-5024-F95B53F8CB75" // transmit is from the phone's perspective
 };
 
+
 var app = {
-    initialize: function() {
+	initialize: function() {
         this.bindEvents();
         detailPage.hidden = true;
     },
@@ -57,7 +57,7 @@ var app = {
         refreshButton.addEventListener('touchstart', this.refreshDeviceList, false);
         sendButton.addEventListener('click', this.sendData, false);
         disconnectButton.addEventListener('touchstart', this.disconnect, false);
-		fwupButton.addEventListener('touchstart', this.getFirmware, false);
+		fwupButton.addEventListener('touchstart', this.readFirmware, false);
         deviceList.addEventListener('touchstart', this.connect, false); // assume not scrolling
     },
     onDeviceReady: function() {
@@ -122,7 +122,6 @@ var app = {
 	getFirmware: function() {
 		var fileTransfer = new FileTransfer();
 		var uri = encodeURI("http://maiadev.weatherlink.com/firmware/fwup.bin");
-		//var uri = encodeURI("http://www.phonegaptutorial.com/wp-content/uploads/examples/phonegap-logo.png");
 		var fileURL = "cdvfile://localhost/persistent/fwup.bin"
 		
 		fileTransfer.download(
@@ -139,6 +138,34 @@ var app = {
 			true
 		);
 		
+	},
+	readFirmware: function() {
+		alert("read firmware");
+		window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, gotFS, 
+			function(error) { 
+				alert("file system error " + error.code); 
+			}
+		);
+		var gotFS: function(fileSystem) {
+			fileSystem.root.getFile("fwup.bin", {create: false}, gotFileEntry, 
+				function(error) { 
+					alert("getFileEntry error " + error.code); 
+				}
+			);
+		};
+		var gotFileEntry: function(fileEntry) {
+			fileEntry.file(gotFile, 
+				function(error) { alert("read file error " + error.code) } );
+		};
+		var gotFile: function(file) {
+			var reader = new FileReader();
+			reader.readAsArrayBuffer(file);
+			var fBuffer = reader.result;
+			//print out THSQ header on addr 0
+			alert("Firmware bytes " + FirmwareAbuf.byteLength);
+			var byteView = new Uint8Array(fBuffer);
+			alert("Byte 5: " + byteView[4]);
+		};
 	},
     showMainPage: function() {
         mainPage.hidden = false;
