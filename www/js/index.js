@@ -57,7 +57,8 @@ var app = {
         refreshButton.addEventListener('touchstart', this.refreshDeviceList, false);
         sendButton.addEventListener('click', this.sendData, false);
         disconnectButton.addEventListener('touchstart', this.disconnect, false);
-		fwupButton.addEventListener('touchstart', this.readFirmware, false);
+		fwupInstallButton.addEventListener('touchstart', this.readFirmware, false);
+		fwupDownloadButton.addEventListener('touchstart', this.getFirmware, false);
         deviceList.addEventListener('touchstart', this.connect, false); // assume not scrolling
     },
     onDeviceReady: function() {
@@ -122,7 +123,8 @@ var app = {
 	getFirmware: function() {
 		var fileTransfer = new FileTransfer();
 		var uri = encodeURI("http://maiadev.weatherlink.com/firmware/fwup.bin");
-		var fileURL = "cdvfile://localhost/persistent/fwup.bin"
+		//var uri = encodeURI("http://10.94.24.50/firmware/fwup.bin");
+		var fileURL = "cdvfile://localhost/persistent/fwup.bin";
 		
 		fileTransfer.download(
 			uri,
@@ -140,32 +142,32 @@ var app = {
 		
 	},
 	readFirmware: function() {
-		alert("read firmware");
-		window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, gotFS, 
-			function(error) { 
-				alert("file system error " + error.code); 
-			}
-		);
-		var gotFS: function(fileSystem) {
-			fileSystem.root.getFile("fwup.bin", {create: false}, gotFileEntry, 
-				function(error) { 
-					alert("getFileEntry error " + error.code); 
-				}
-			);
+		var myfileURL = "cdvfile://localhost/persistent/fwup.bin";
+		var fail = function(e) {
+			alert("resolveLocalFileSystemURL " + e.toString());
 		};
-		var gotFileEntry: function(fileEntry) {
-			fileEntry.file(gotFile, 
-				function(error) { alert("read file error " + error.code) } );
+		window.resolveLocalFileSystemURL(myfileURL, app.gotFile, fail);
+	},
+	gotFile: function(fileEntry) {
+		var fail = function(e) {
+			alert("fileEntry.file err_cb " + e.toString());
 		};
-		var gotFile: function(file) {
+		var success = function(file) {
+			alert(".file success");
 			var reader = new FileReader();
+			reader.onloadend = function(e) { // this is needed? Called when reading file is completed.
+				var txtArea = document.createElement('textarea');
+				var byteView = new Uint8Array(this.result, 0 , 9); //this.result is the array buffer.
+				txtArea.value = bytesToString(byteView);
+				//txtArea.value = this.result;
+				document.body.appendChild(txtArea);
+			};
 			reader.readAsArrayBuffer(file);
-			var fBuffer = reader.result;
-			//print out THSQ header on addr 0
-			alert("Firmware bytes " + FirmwareAbuf.byteLength);
-			var byteView = new Uint8Array(fBuffer);
-			alert("Byte 5: " + byteView[4]);
+			//reader.readAsArrayBuffer(file);
+			//alert("OK! " + reader.result[4]);
 		};
+		fileEntry.file(success, fail);
+		alert("got file");
 	},
     showMainPage: function() {
         mainPage.hidden = false;
