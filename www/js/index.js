@@ -53,6 +53,7 @@ var fwup = {
 
 
 var app = {
+	currentDeviceId: "",
 	initialize: function() {
         this.bindEvents();
         detailPage.hidden = true;
@@ -61,9 +62,8 @@ var app = {
         document.addEventListener('deviceready', this.onDeviceReady, false);
         refreshButton.addEventListener('touchstart', this.refreshDeviceList, false);
         sendButton.addEventListener('click', this.sendData, false);
-		transferButton.addEventListener('touchstart', this.dataTransfer, false);
+		transferButton.addEventListener('touchstart', this.readFirmware, false);
         disconnectButton.addEventListener('touchstart', this.disconnect, false);
-		fwupInstallButton.addEventListener('touchstart', this.readFirmware, false);
 		fwupDownloadButton.addEventListener('touchstart', this.getFirmware, false);
         deviceList.addEventListener('touchstart', this.connect, false); // assume not scrolling
     },
@@ -96,6 +96,7 @@ var app = {
 			sendButton.dataset.deviceId = deviceId;
 			transferButton.dataset.deviceId = deviceId;
 			disconnectButton.dataset.deviceId = deviceId;
+			app.currentDeviceId = deviceId;
 			app.showDetailPage();
 		};
 
@@ -123,12 +124,17 @@ var app = {
         ble.writeWithoutResponse(deviceId, cmd.serviceUUID, cmd.txCharacteristic, data, success, failure);
 
     },
-    dataTransfer: function(event, buffer) { // send data to bluetooth
-		var count = 5000;
+    dataTransfer: function(arrayBuffer) { // send data to bluetooth
+		var offset = 0;
+		var count = Math.ceil( (arrayBuffer.byteLength)/20 );
+		//var count = 4000;
+		
         var success = function() {
 			count--;
+			offset += 20;
+			data = arrayBuffer.slice(offset, offset + 20); // offset + 20 or offset + remaining
 			if (count > 0) {
-				ble.writeWithoutResponse(deviceId, fwup.serviceUUID, fwup.txCharacteristic, data, success, failure);
+				ble.writeWithoutResponse(app.currentDeviceId, fwup.serviceUUID, fwup.txCharacteristic, data, success, failure);
 			}
 			else {
 				alert("finished");
@@ -138,9 +144,8 @@ var app = {
             alert("Failed writing data to 0000DA13");
         };
 		
-        var data = stringToBytes('12345678901234567890');
-        var deviceId = event.target.dataset.deviceId;
-        ble.writeWithoutResponse(deviceId, fwup.serviceUUID, fwup.txCharacteristic, data, success, failure);
+        var data = arrayBuffer.slice(offset, offset + 20);
+        ble.writeWithoutResponse(app.currentDeviceId, fwup.serviceUUID, fwup.txCharacteristic, data, success, failure);
     },
     disconnect: function(event) {
         var deviceId = event.target.dataset.deviceId;
@@ -179,21 +184,14 @@ var app = {
 			alert("fileEntry.file err_cb " + e.toString());
 		};
 		var success = function(file) {
-			alert(".file success");
 			var reader = new FileReader();
 			reader.onloadend = function(e) { // this is needed? Called when reading file is completed.
-				var txtArea = document.createElement('textarea');
-				var byteView = new Uint8Array(this.result, 0 , 9); //this.result is the array buffer.
-				txtArea.value = bytesToString(byteView);
-				//txtArea.value = this.result;
-				document.body.appendChild(txtArea);
+				alert("file read success...transfering");
+				app.dataTransfer(this.result);
 			};
 			reader.readAsArrayBuffer(file);
-			//reader.readAsArrayBuffer(file);
-			//alert("OK! " + reader.result[4]);
 		};
 		fileEntry.file(success, fail);
-		alert("got file");
 	},
     showMainPage: function() {
         mainPage.hidden = false;
