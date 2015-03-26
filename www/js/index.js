@@ -27,7 +27,7 @@ function bytesToString(buffer) {
     return String.fromCharCode.apply(null, new Uint8Array(buffer));
 }
 
-// ASCII only
+// Converts a string to array buffer
 function stringToBytes(string) {
     var array = new Uint8Array(string.length);
     for (var i = 0, l = string.length; i < l; i++) {
@@ -46,6 +46,11 @@ var cmd = {
 	txCharacteristic: "0000DA11-384C-0787-5024-F95B53F8CB75" // transmit is from the phone's perspective
 };
 
+var fwup = {
+	serviceUUID: "0000DA12-384C-0787-5024-F95B53F8CB75",
+	txCharacteristic: "0000DA13-384C-0787-5024-F95B53F8CB75" // transmit is from the phone's perspective
+};
+
 
 var app = {
 	initialize: function() {
@@ -56,6 +61,7 @@ var app = {
         document.addEventListener('deviceready', this.onDeviceReady, false);
         refreshButton.addEventListener('touchstart', this.refreshDeviceList, false);
         sendButton.addEventListener('click', this.sendData, false);
+		transferButton.addEventListener('touchstart', this.dataTransfer, false);
         disconnectButton.addEventListener('touchstart', this.disconnect, false);
 		fwupInstallButton.addEventListener('touchstart', this.readFirmware, false);
 		fwupDownloadButton.addEventListener('touchstart', this.getFirmware, false);
@@ -84,13 +90,14 @@ var app = {
     },
     connect: function(e) {
         var deviceId = e.target.dataset.deviceId,
-            onConnect = function() {
-                // subscribe for incoming data
-                ble.notify(deviceId, serial.serviceUUID, serial.rxCharacteristic, app.onData, app.onError);
-                sendButton.dataset.deviceId = deviceId;
-                disconnectButton.dataset.deviceId = deviceId;
-                app.showDetailPage();
-            };
+		onConnect = function() {
+			// subscribe for incoming data
+			ble.notify(deviceId, serial.serviceUUID, serial.rxCharacteristic, app.onData, app.onError);
+			sendButton.dataset.deviceId = deviceId;
+			transferButton.dataset.deviceId = deviceId;
+			disconnectButton.dataset.deviceId = deviceId;
+			app.showDetailPage();
+		};
 
         ble.connect(deviceId, onConnect, app.onError);
     },
@@ -108,13 +115,32 @@ var app = {
         };
 
         var failure = function() {
-            alert("Failed writing data to service");
+            alert("Failed writing data to 0000DA11");
         };
 
         var data = stringToBytes(messageInput.value);
         var deviceId = event.target.dataset.deviceId;
         ble.writeWithoutResponse(deviceId, cmd.serviceUUID, cmd.txCharacteristic, data, success, failure);
 
+    },
+    dataTransfer: function(event, buffer) { // send data to bluetooth
+		var count = 5000;
+        var success = function() {
+			count--;
+			if (count > 0) {
+				ble.writeWithoutResponse(deviceId, fwup.serviceUUID, fwup.txCharacteristic, data, success, failure);
+			}
+			else {
+				alert("finished");
+			}
+        };
+        var failure = function() {
+            alert("Failed writing data to 0000DA13");
+        };
+		
+        var data = stringToBytes('12345678901234567890');
+        var deviceId = event.target.dataset.deviceId;
+        ble.writeWithoutResponse(deviceId, fwup.serviceUUID, fwup.txCharacteristic, data, success, failure);
     },
     disconnect: function(event) {
         var deviceId = event.target.dataset.deviceId;
