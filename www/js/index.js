@@ -48,7 +48,8 @@ var cmd = {
 
 var fwup = {
 	serviceUUID: "0000DA12-384C-0787-5024-F95B53F8CB75",
-	txCharacteristic: "0000DA13-384C-0787-5024-F95B53F8CB75" // transmit is from the phone's perspective
+	txCharacteristic: "0000DA13-384C-0787-5024-F95B53F8CB75", // transmit is from the phone's perspective
+	ctlCharacteristic: "0000DA14-384C-0787-5024-F95B53F8CB75"
 };
 
 
@@ -64,7 +65,7 @@ var app = {
         sendButton.addEventListener('click', this.sendData, false);
 		transferButton.addEventListener('touchstart', this.readFirmware, false);
         disconnectButton.addEventListener('touchstart', this.disconnect, false);
-		fwupDownloadButton.addEventListener('touchstart', this.getFirmware, false);
+//		fwupDownloadButton.addEventListener('touchstart', this.getFirmware, false);
         deviceList.addEventListener('touchstart', this.connect, false); // assume not scrolling
     },
     onDeviceReady: function() {
@@ -127,25 +128,43 @@ var app = {
     dataTransfer: function(arrayBuffer) { // send data to bluetooth
 		var offset = 0;
 		var count = Math.ceil( (arrayBuffer.byteLength)/20 );
-		//var count = 4000;
+		var buffer = new ArrayBuffer(1);
+		//var ctl = new Uint8Array(buffer);
 		
         var success = function() {
 			count--;
 			offset += 20;
-			data = arrayBuffer.slice(offset, offset + 20); // offset + 20 or offset + remaining
-			if (count > 0) {
-				ble.writeWithoutResponse(app.currentDeviceId, fwup.serviceUUID, fwup.txCharacteristic, data, success, failure);
+			var data = arrayBuffer.slice(offset, offset + 20); // offset + 20 or offset + remaining
+			var last = function() {
+				ble.write(app.currentDeviceId, fwup.serviceUUID, fwup.txCharacteristic, data, done, failure);
+			};
+			var done = function() {
+				alert("finished");
+			};
+			
+			if (count > 1) {
+				ble.write(app.currentDeviceId, fwup.serviceUUID, fwup.txCharacteristic, data, success, failure);
 			}
 			else {
-				alert("finished");
+				//ctl[0] = 12; // 0x0C
+				ble.write(app.currentDeviceId, fwup.serviceUUID, fwup.ctlCharacteristic, buffer, last, failure);
 			}
         };
         var failure = function() {
             alert("Failed writing data to 0000DA13");
         };
+		var failure2 = function() {
+			alert("Failed writing data to 0000DA14");
+		};
+		var startTx = function() {
+			var data = arrayBuffer.slice(offset, offset + 20);
+			ble.write(app.currentDeviceId, fwup.serviceUUID, fwup.txCharacteristic, data, success, failure);
+		};
 		
-        var data = arrayBuffer.slice(offset, offset + 20);
-        ble.writeWithoutResponse(app.currentDeviceId, fwup.serviceUUID, fwup.txCharacteristic, data, success, failure);
+		//ctl[0] = 10; // 0x0A
+		var xxxx = stringToBytes('1234');
+		ble.writeWithoutResponse(app.currentDeviceId, fwup.serviceUUID, fwup.ctlCharacteristic, xxxx, startTx, failure2);
+		//ble.write() does not work!!!! write request?
     },
     disconnect: function(event) {
         var deviceId = event.target.dataset.deviceId;
