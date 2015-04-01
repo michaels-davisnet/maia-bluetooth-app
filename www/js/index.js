@@ -20,7 +20,8 @@
 
 'use strict'; // need to be included for ble write
 
-// Based on the serialLab example.
+// Based on the serialLab example. 
+// UPDATE FROM COM.MEGSTER.CORDOVA.BLE 0.1.1 TO X
 
 // ASCII only
 function bytesToString(buffer) {
@@ -162,9 +163,8 @@ var app = {
 		};
 		
 		//ctl[0] = 10; // 0x0A
-		var xxxx = stringToBytes('1234');
-		ble.writeWithoutResponse(app.currentDeviceId, fwup.serviceUUID, fwup.ctlCharacteristic, xxxx, startTx, failure2);
-		//ble.write() does not work!!!! write request?
+		var testdata = arrayBuffer.slice(offset, offset + 20);
+		ble.writeWithoutResponse(app.currentDeviceId, fwup.serviceUUID, fwup.ctlCharacteristic, testdata, startTx, failure2);
     },
     disconnect: function(event) {
         var deviceId = event.target.dataset.deviceId;
