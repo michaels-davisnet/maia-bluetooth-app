@@ -44,7 +44,7 @@ var app = {
         refreshButton.addEventListener('touchstart', this.refreshDeviceList, false);
         deviceList.addEventListener('touchstart', this.connect, false); // assume not scrolling
         disconnectButton.addEventListener('touchstart', this.disconnect, false);
-        sendButton.addEventListener('click', this.sendData, false);
+        sendButton.addEventListener('click', this.test, false);
     },
     onDeviceReady: function() {
         app.refreshDeviceList();
@@ -74,16 +74,16 @@ var app = {
 			disconnectButton.dataset.deviceId = deviceId;
 			app.currentDeviceId = deviceId;
 			app.showDetailPage();
-			app.printout("Connected to:" + deviceId);
+			app.printout("Connected to:" + deviceId + "\n");
 		};
 
         ble.connect(deviceId, onConnect, app.onError);
     },
-    onData: function(data) { // data received from bluetooth preformatted ascii encoded.
-        //console.log(data);
-        resultDiv.innerHTML += bytesToString(data);
-        resultDiv.scrollTop = resultDiv.scrollHeight;
-    },
+//    onData: function(data) { // data received from bluetooth preformatted ascii encoded.
+//        //console.log(data);
+//        resultDiv.innerHTML += bytesToString(data);
+//        resultDiv.scrollTop = resultDiv.scrollHeight;
+//    },
     printout: function(string) { 
     	resultDiv.innerHTML += string;
     	resultDiv.scrollTop = resultDiv.scrollHeight;
@@ -103,6 +103,29 @@ var app = {
         var deviceId = event.target.dataset.deviceId;
         ble.writeWithoutResponse(deviceId, cmd.serviceUUID, cmd.txCharacteristic, data, success, failure);
 
+    },
+    test: function(packet) {
+    	var arraybuf = new ArrayBuffer(20);
+    	var view = new Uint8Array(arraybuf);
+    	
+    	var finished = function() {
+    		app.printout("finished\n");
+    	};
+    	var success = function() {
+    		app.printout("Write success\n");
+    		view.set([0xff, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], 0);
+    		ble.writeWithoutResponse(deviceId, cmd.serviceUUID, cmd.txCharacteristic, arraybuf, finished, failure);
+    	};
+    	
+    	var failure = function() {
+    		app.printout("Failed writing data to 0000DA11\n");
+    	};
+    	app.printout("starting test\n");
+		
+		view.set([0x00, 0x01, 0x19, 0x00, 0x06, 0x16, 0x00, 0x05, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01], 0);
+		
+    	var deviceId = event.target.dataset.deviceId;
+    	ble.writeWithoutResponse(deviceId, cmd.serviceUUID, cmd.txCharacteristic, arraybuf, success, failure);
     },
     disconnect: function(event) {
         var deviceId = event.target.dataset.deviceId;
