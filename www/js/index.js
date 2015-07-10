@@ -2,7 +2,7 @@
 // UPDATE FROM COM.MEGSTER.CORDOVA.BLE 0.1.1 TO 0.1.6
 
 /* global mainPage, deviceList, refreshButton */
-/* global detailPage, resultDiv, messageInput, sendButton, disconnectButton */
+/* global detailPage, resultDiv, testButton1, testButton0, disconnectButton */
 /* global ble, cordova  */
 /* jshint browser: true , devel: true*/
 
@@ -44,7 +44,8 @@ var app = {
         refreshButton.addEventListener('touchstart', this.refreshDeviceList, false);
         deviceList.addEventListener('touchstart', this.connect, false); // assume not scrolling
         disconnectButton.addEventListener('touchstart', this.disconnect, false);
-        sendButton.addEventListener('click', this.test, false);
+        testButton0.addEventListener('touchstart', this.test, false);
+        testButton1.addEventListener('touchstart', this.testConfigSensor, false);
     },
     onDeviceReady: function() {
         app.refreshDeviceList();
@@ -70,7 +71,8 @@ var app = {
     connect: function(e) {
         var deviceId = e.target.dataset.deviceId,
 		onConnect = function() {
-			sendButton.dataset.deviceId = deviceId;
+        	testButton0.dataset.deviceId = deviceId;
+        	testButton1.dataset.deviceId = deviceId;
 			disconnectButton.dataset.deviceId = deviceId;
 			app.currentDeviceId = deviceId;
 			app.showDetailPage();
@@ -88,22 +90,6 @@ var app = {
     	resultDiv.innerHTML += string;
     	resultDiv.scrollTop = resultDiv.scrollHeight;
     },
-    sendData: function(event) { // send data to bluetooth
-        var success = function() {
-            console.log("success");
-            //resultDiv.innerHTML = resultDiv.innerHTML + "Sent: " + messageInput.value + "<br/>";
-            resultDiv.scrollTop = resultDiv.scrollHeight;
-        };
-
-        var failure = function() {
-            alert("Failed writing data to 0000DA11");
-        };
-
-        var data = stringToBytes(messageInput.value);
-        var deviceId = event.target.dataset.deviceId;
-        ble.writeWithoutResponse(deviceId, cmd.serviceUUID, cmd.txCharacteristic, data, success, failure);
-
-    },
     test: function(packet) {
     	var arraybuf = new ArrayBuffer(20);
     	var view = new Uint8Array(arraybuf);
@@ -114,18 +100,45 @@ var app = {
     	var success = function() {
     		app.printout("Write success\n");
     		view.set([0xff, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], 0);
-    		ble.writeWithoutResponse(deviceId, cmd.serviceUUID, cmd.txCharacteristic, arraybuf, finished, failure);
+    		ble.write(deviceId, cmd.serviceUUID, cmd.txCharacteristic, arraybuf, finished, failure);
     	};
     	
     	var failure = function() {
     		app.printout("Failed writing data to 0000DA11\n");
     	};
-    	app.printout("starting test\n");
+    	app.printout("starting test, Node ID\n");
 		
 		view.set([0x00, 0x01, 0x19, 0x00, 0x06, 0x16, 0x00, 0x05, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01], 0);
 		
     	var deviceId = event.target.dataset.deviceId;
-    	ble.writeWithoutResponse(deviceId, cmd.serviceUUID, cmd.txCharacteristic, arraybuf, success, failure);
+    	ble.write(deviceId, cmd.serviceUUID, cmd.txCharacteristic, arraybuf, success, failure);
+    },
+    testConfigSensor: function(packet) {
+    	var arraybuf = new ArrayBuffer(20);
+    	var view = new Uint8Array(arraybuf);
+    	
+    	var finished = function() {
+    		app.printout("finished\n");
+    	};
+    	var success = function() {
+    		view.set([0x01, 0xbe, 0xef, 0xca, 0xfe, 0xba, 0xbe, 0x01, 0x03, 0x00, 0x14, 0x02, 0x31, 0x41, 0xd8, 0x93, 0x16, 0x17, 0x81, 0x99], 0);
+    		ble.write(deviceId, cmd.serviceUUID, cmd.txCharacteristic, arraybuf, success1, failure);
+    	};
+    	var success1 = function() {
+    		view.set([0xff, 0xfa, 0xbc, 0x72, 0x77, 0x17, 0x83, 0xa7, 0xb8, 0xd2, 0xf3, 0xcd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], 0);
+    		ble.write(deviceId, cmd.serviceUUID, cmd.txCharacteristic, arraybuf, finished, failure);
+    	};
+    	
+    	var failure = function() {
+    		app.printout("Failed writing data to 0000DA11\n");
+    	};
+    	
+    	app.printout("starting test, Config Sensor\n");
+    	
+    	view.set([0x00, 0x01, 0x00, 0x30, 0x11, 0x00, 0x2D, 0x00, 0x07, 0x6B, 0x77, 0x55, 0x10, 0x00, 0x80, 0x0A, 0x1D, 0x00, 0xDE, 0xAD], 0);
+    	
+    	var deviceId = event.target.dataset.deviceId;
+    	ble.write(deviceId, cmd.serviceUUID, cmd.txCharacteristic, arraybuf, success, failure);
     },
     disconnect: function(event) {
         var deviceId = event.target.dataset.deviceId;
