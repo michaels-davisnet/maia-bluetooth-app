@@ -2,7 +2,7 @@
 // UPDATE FROM COM.MEGSTER.CORDOVA.BLE 0.1.1 TO 0.1.6
 
 /* global mainPage, deviceList, refreshButton */
-/* global detailPage, resultDiv, testButton1, testButton0, disconnectButton */
+/* global detailPage, resultDiv, testButton1, testButton0, testButton2, disconnectButton */
 /* global ble, cordova  */
 /* jshint browser: true , devel: true*/
 
@@ -46,6 +46,7 @@ var app = {
         disconnectButton.addEventListener('touchstart', this.disconnect, false);
         testButton0.addEventListener('touchstart', this.test, false);
         testButton1.addEventListener('touchstart', this.testConfigSensor, false);
+        testButton2.addEventListener('touchstart', this.testThroughput, false);
     },
     onDeviceReady: function() {
         app.refreshDeviceList();
@@ -71,8 +72,10 @@ var app = {
     connect: function(e) {
         var deviceId = e.target.dataset.deviceId,
 		onConnect = function() {
+        	/* XXX function object needs deviceID */
         	testButton0.dataset.deviceId = deviceId;
         	testButton1.dataset.deviceId = deviceId;
+        	testButton2.dataset.deviceId = deviceId;
 			disconnectButton.dataset.deviceId = deviceId;
 			app.currentDeviceId = deviceId;
 			app.showDetailPage();
@@ -81,11 +84,6 @@ var app = {
 
         ble.connect(deviceId, onConnect, app.onError);
     },
-//    onData: function(data) { // data received from bluetooth preformatted ascii encoded.
-//        //console.log(data);
-//        resultDiv.innerHTML += bytesToString(data);
-//        resultDiv.scrollTop = resultDiv.scrollHeight;
-//    },
     printout: function(string) { 
     	resultDiv.innerHTML += string;
     	resultDiv.scrollTop = resultDiv.scrollHeight;
@@ -139,6 +137,30 @@ var app = {
     	
     	var deviceId = event.target.dataset.deviceId;
     	ble.write(deviceId, cmd.serviceUUID, cmd.txCharacteristic, arraybuf, success, failure);
+    },
+    testThroughput: function() {
+    	var bytes = new ArrayBuffer(20);
+    	var handle = new Uint8Array(bytes);
+    	var deviceAddr = event.target.dataset.deviceId;
+    	var count = 100;
+    	handle.set([0xFF, 0x01, 0x19, 0x00, 0x06, 0x16, 0x00, 0x05, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF], 0);
+    	var fail = function() {
+    		app.printout("Write failed\n");
+    	};
+    	var success = function() {
+    		if (count > 0) {
+    			ble.write(deviceAddr, cmd.serviceUUID, cmd.txCharacteristic, bytes, success, fail);
+    			count--;
+    		}
+    		else {
+    			var elapsed = Date.now() - starttime;
+    			app.printout("Finshed elapsed (ms) " + elapsed + "\n");
+    		}
+    	};
+    	
+    	app.printout("throughput test 2000 bytes\n");
+    	var starttime = Date.now();
+    	ble.write(deviceAddr, cmd.serviceUUID, cmd.txCharacteristic, bytes, success, fail);
     },
     disconnect: function(event) {
         var deviceId = event.target.dataset.deviceId;
