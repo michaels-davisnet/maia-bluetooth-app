@@ -151,6 +151,7 @@ var app = {
     		if (count > 0) {
     			ble.write(deviceAddr, cmd.serviceUUID, cmd.txCharacteristic, bytes, success, fail);
     			count--;
+    			app.printout(".");
     		}
     		else {
     			var elapsed = Date.now() - starttime;
